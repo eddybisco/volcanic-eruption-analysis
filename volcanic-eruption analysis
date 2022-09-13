@@ -1,0 +1,88 @@
+import numpy as np
+import pandas as pd
+import geopandas as gpd #https://geopandas.org/en/stable/
+import xarray as xr #https://xarray.pydata.org/en/stable/
+fid = 'significant-volcanic-eruption-database.csv'
+df = pd.read_csv(fid,  sep= ';')
+print(df.shape)
+df.head()
+
+df_Coord = pd.DataFrame(Coord, columns = ['Coordinates'])
+df_Coord
+
+df['Coordinates'].str.split(',', expand=True)
+
+# Create two lists for the loop results to be placed
+lat = []
+lon = []
+
+# For each row in a varible,
+for row in df['Coordinates']:
+    # Try to,
+    try:
+        # Split the row by comma and append
+        # everything before the comma to lat
+        lat.append(row.split(',')[0])
+        # Split the row by comma and append
+        # everything after the comma to lon
+        lon.append(row.split(',')[1])
+    # But if you get an error
+    except:
+        # append a missing value to lat
+        lat.append(np.NaN)
+        # append a missing value to lon
+        lon.append(np.NaN)
+
+# Create two new columns from lat and lon
+df['latitude'] = lat
+df['longitude'] = lon
+
+import plotly
+import numpy as np
+import pandas as pd
+import geopandas as gpd
+import shapely
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+from shapely import wkt
+
+gdf = gpd.GeoDataFrame(
+    df, geometry=gpd.points_from_xy(df.latitude, df.longitude))
+    
+from shapely import wkt
+df['str_geom'] = df.geometry.apply(lambda x: wkt.dumps(x))
+
+crs = 'epsg:4326'
+geom = [shapely.wkt.loads(wkt) for wkt in df['str_geom'].values]
+df_gdf = gpd.GeoDataFrame(df, crs=crs, geometry=geom)
+df_gdf.head()
+
+#df_gdf['Volcanic Explosivity Index'] = list(map(lambda x: x.y, geom))
+df_gdf['longitude'] = df_gdf.geometry.y
+df_gdf['latitude'] = df_gdf.geometry.x
+
+VEI = df_gdf['Volcanic Explosivity Index']
+
+import plotly.express as px
+fig = px.scatter_geo(df_gdf, lat="latitude", lon='longitude', color="Volcanic Explosivity Index",
+        title ='A global view of the volcanoes colored by their VEI (Volcanic Explosivity Index)',)
+fig.show()
+
+Year = df_gdf['Year'] 
+
+def animate_map(Year):
+    fig = px.scatter_mapbox(df_gdf,
+              lat="latitude" ,
+              lon="longitude",
+              hover_name="Elevation",
+              color="Volcanic Explosivity Index",
+              animation_frame=Year,
+              mapbox_style='carto-positron',
+              category_orders={
+              Year:list(np.sort(df_gdf['Year'].unique()))              
+              }, zoom=1)
+    fig.update_layout(
+        title = 'Temporal animation of Significant Volcanic Eruptions',
+        geo_scope='world')    
+    fig.show();
+animate_map(Year='Year')
